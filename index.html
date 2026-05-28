@@ -136,6 +136,32 @@ tr:last-child td{border-bottom:none}
   padding:4px 0 0;display:none;
 }
 @media(max-width:680px){.scroll-hint{display:block}}
+
+/* ── Breakdown tables ── */
+.breakdown-section{padding:0 12px 24px}
+.breakdown-title{
+  font-size:13px;font-weight:500;margin-bottom:0;
+  background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);
+  padding:10px 14px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;
+  user-select:none;margin-bottom:4px;
+}
+.breakdown-title:hover{border-color:var(--gold);color:var(--gold)}
+.breakdown-title .arrow{font-size:11px;color:var(--text3);transition:transform .2s;display:inline-block}
+.breakdown-title.open .arrow{transform:rotate(180deg)}
+.breakdown-body{
+  display:none;overflow-x:auto;-webkit-overflow-scrolling:touch;
+  border:1px solid var(--border);border-radius:var(--radius);margin-bottom:8px;
+}
+.breakdown-body.open{display:block}
+.breakdown-body .scroll-hint{display:none}
+@media(max-width:680px){.breakdown-body .scroll-hint{display:block}}
+.bd-label{
+  font-size:11px;color:var(--text2);padding:6px 10px 2px;
+  font-style:italic;border-bottom:.5px solid var(--border);background:var(--bg2);
+}
+.bd-arrow{font-size:10px;opacity:.5;margin-left:2px}
+.breakdown-body th:hover{color:var(--gold2)}
+.breakdown-body th.sort-on,.breakdown-body th .sort-on{color:var(--gold2);opacity:1}
 </style>
 </head>
 <body>
@@ -174,6 +200,7 @@ tr:last-child td{border-bottom:none}
       <select id="sell">
         <option value="Grimy" selected>Grimy</option>
         <option value="Clean">Clean</option>
+        <option value="Unf">Unfinished potion</option>
       </select>
     </div>
     <div class="ctrl"><label>Anima plant</label>
@@ -183,15 +210,24 @@ tr:last-child td{border-bottom:none}
         <option value="Attas">Attas (+5% yield)</option>
       </select>
     </div>
+    <div class="ctrl"><label>Kandarin diary (Catherby yield)</label>
+      <select id="kandarin">
+        <option value="0">None</option>
+        <option value="10">Medium (+5%)</option>
+        <option value="17">Hard (+10%)</option>
+        <option value="25">Elite (+15%)</option>
+      </select>
+    </div>
 
     <div class="slabel">Equipment</div>
     <label class="cb-row"><input type="checkbox" id="sec" checked/> Magic secateurs (+10%)</label>
     <label class="cb-row"><input type="checkbox" id="fcape"/> Farming cape (+5%)</label>
     <label class="cb-row"><input type="checkbox" id="bottomless" checked/> Bottomless bucket</label>
     <label class="cb-row"><input type="checkbox" id="resurrect"/> Resurrect Crops</label>
+    <label class="cb-row"><input type="checkbox" id="kourend"/> Hard Kourend diary (+5% yield at Guild)</label>
 
     <div class="patch-section">
-      <div class="slabel" style="margin-bottom:6px">Herb Patches — tap to toggle</div>
+      <div class="slabel" style="margin-bottom:6px">Herb Patches</div>
       <div class="patch-grid" id="patch-grid"></div>
     </div>
 
@@ -204,31 +240,31 @@ tr:last-child td{border-bottom:none}
 
 <!-- Summary cards -->
 <div class="metrics">
-  <div class="metric"><div class="mlabel">Patches</div><div class="mval" id="m-count">—</div></div>
-  <div class="metric"><div class="mlabel">Best herb</div><div class="mval" id="m-best" style="font-size:14px;padding-top:4px">—</div></div>
-  <div class="metric"><div class="mlabel">Best herb profit</div><div class="mval" id="m-profit">—</div></div>
-  <div class="metric"><div class="mlabel">Best herb XP</div><div class="mval" id="m-xp">—</div></div>
+  <div class="metric"><div class="mlabel">Active patches</div><div class="mval" id="m-count">—</div></div>
+  <div class="metric"><div class="mlabel">Most profitable herb</div><div class="mval" id="m-best" style="font-size:14px;padding-top:4px">—</div></div>
+  <div class="metric"><div class="mlabel">Profit per run</div><div class="mval" id="m-profit">—</div></div>
+  <div class="metric"><div class="mlabel">XP per run</div><div class="mval" id="m-xp">—</div></div>
 </div>
 
 <!-- Table -->
 <div class="table-wrap">
   <div class="tbl-meta">
     <span class="ts" id="ts"></span>
-    <span class="tbl-note">5-min avg · auto-refresh 5min</span>
+    <span class="tbl-note">5-min weighted avg · auto-refreshes every 5 min</span>
   </div>
   <div class="scroll-hint">← scroll table sideways →</div>
   <table>
     <thead><tr>
       <th id="th-name"   onclick="srt('name')">Herb</th>
-      <th class="r">Req</th>
-      <th class="r" id="th-seed"   onclick="srt('seed')">Seed</th>
-      <th class="r" id="th-hprice" onclick="srt('hprice')">Price</th>
-      <th class="r" id="th-death"  onclick="srt('death')">Death%</th>
-      <th class="r" id="th-yield"  onclick="srt('yield')">Yield</th>
-      <th           id="th-res"    onclick="srt('res')">Revive?</th>
-      <th class="r" id="th-profit" onclick="srt('profit')">Profit</th>
-      <th class="r" id="th-xp"     onclick="srt('xp')">XP</th>
-      <th class="r" id="th-gpxp"   onclick="srt('gpxp')">GP/XP</th>
+      <th class="r">Lvl req</th>
+      <th class="r" id="th-seed"   onclick="srt('seed')">Seed cost</th>
+      <th class="r" id="th-hprice" onclick="srt('hprice')">Herb price</th>
+      <th class="r" id="th-death"  onclick="srt('death')">Death %</th>
+      <th class="r" id="th-yield"  onclick="srt('yield')">Avg yield</th>
+      <th           id="th-res"    onclick="srt('res')">Resurrect?</th>
+      <th class="r" id="th-profit" onclick="srt('profit')">Profit per run</th>
+      <th class="r" id="th-xp"     onclick="srt('xp')">XP per run</th>
+      <th class="r" id="th-gpxp"   onclick="srt('gpxp')">GP / XP</th>
     </tr></thead>
     <tbody id="tbody">
       <tr><td colspan="10" style="text-align:center;padding:40px;color:var(--text3)">Loading prices…</td></tr>
@@ -236,44 +272,53 @@ tr:last-child td{border-bottom:none}
   </table>
 </div>
 
+<!-- Per-patch breakdown tables -->
+<div class="breakdown-section" id="breakdown-section">
+  <!-- dynamically populated by buildBreakdowns() -->
+</div>
+
 <script>
 // ── Data ─────────────────────────────────────────────────────────────────────
 const HERBS=[
-  {name:'Guam leaf',   seed:'Guam seed',       grimy:'Grimy guam leaf',   clean:'Guam leaf',   lo:25,hi:80,lvl:9, xp:12.5, pxp:11},
-  {name:'Marrentill',  seed:'Marrentill seed',  grimy:'Grimy marrentill',  clean:'Marrentill',  lo:28,hi:80,lvl:14,xp:13.5, pxp:13.5},
-  {name:'Tarromin',    seed:'Tarromin seed',    grimy:'Grimy tarromin',    clean:'Tarromin',    lo:31,hi:80,lvl:19,xp:16,   pxp:16},
-  {name:'Harralander', seed:'Harralander seed', grimy:'Grimy harralander', clean:'Harralander', lo:36,hi:80,lvl:26,xp:24,   pxp:21.5},
-  {name:'Ranarr weed', seed:'Ranarr seed',      grimy:'Grimy ranarr weed', clean:'Ranarr weed', lo:39,hi:80,lvl:32,xp:30.5, pxp:27},
-  {name:'Toadflax',    seed:'Toadflax seed',    grimy:'Grimy toadflax',    clean:'Toadflax',    lo:43,hi:80,lvl:38,xp:38.5, pxp:34},
-  {name:'Irit leaf',   seed:'Irit seed',        grimy:'Grimy irit leaf',   clean:'Irit leaf',   lo:46,hi:80,lvl:44,xp:43,   pxp:43},
-  {name:'Avantoe',     seed:'Avantoe seed',     grimy:'Grimy avantoe',     clean:'Avantoe',     lo:50,hi:80,lvl:50,xp:54.5, pxp:54.5},
-  {name:'Kwuarm',      seed:'Kwuarm seed',      grimy:'Grimy kwuarm',      clean:'Kwuarm',      lo:54,hi:80,lvl:56,xp:69,   pxp:69},
-  {name:'Snapdragon',  seed:'Snapdragon seed',  grimy:'Grimy snapdragon',  clean:'Snapdragon',  lo:57,hi:80,lvl:62,xp:98.5, pxp:98.5},
-  {name:'Huasca',      seed:'Huasca seed',      grimy:'Grimy huasca',      clean:'Huasca',      lo:58,hi:80,lvl:65,xp:110,   pxp:110},
-  {name:'Cadantine',   seed:'Cadantine seed',   grimy:'Grimy cadantine',   clean:'Cadantine',   lo:60,hi:80,lvl:67,xp:106.5,pxp:106.5},
-  {name:'Lantadyme',   seed:'Lantadyme seed',   grimy:'Grimy lantadyme',   clean:'Lantadyme',   lo:64,hi:80,lvl:73,xp:151.5,pxp:151.5},
-  {name:'Dwarf weed',  seed:'Dwarf weed seed',  grimy:'Grimy dwarf weed',  clean:'Dwarf weed',  lo:67,hi:80,lvl:79,xp:170.5,pxp:170.5},
-  {name:'Torstol',     seed:'Torstol seed',     grimy:'Grimy torstol',     clean:'Torstol',     lo:71,hi:80,lvl:85,xp:199.5,pxp:199.5},
+  // lo/hi=CTS values, lvl=farming req, xp=harvest XP per herb, pxp=plant XP (one-time on planting)
+  // XP values from https://oldschool.runescape.wiki/w/Herb_patch/Seeds
+  {name:'Guam leaf',   seed:'Guam seed',       grimy:'Grimy guam leaf',   clean:'Guam leaf',   lo:25,hi:80,lvl:9, xp:12.5, pxp:11,  unf:'Guam potion (unf)'},
+  {name:'Marrentill',  seed:'Marrentill seed',  grimy:'Grimy marrentill',  clean:'Marrentill',  lo:28,hi:80,lvl:14,xp:15,   pxp:13.5,unf:'Marrentill potion (unf)'},
+  {name:'Tarromin',    seed:'Tarromin seed',    grimy:'Grimy tarromin',    clean:'Tarromin',    lo:31,hi:80,lvl:19,xp:18,   pxp:16,  unf:'Tarromin potion (unf)'},
+  {name:'Harralander', seed:'Harralander seed', grimy:'Grimy harralander', clean:'Harralander', lo:36,hi:80,lvl:26,xp:24,   pxp:21.5,unf:'Harralander potion (unf)'},
+  {name:'Ranarr weed', seed:'Ranarr seed',      grimy:'Grimy ranarr weed', clean:'Ranarr weed', lo:39,hi:80,lvl:32,xp:30.5, pxp:27,  unf:'Ranarr potion (unf)'},
+  {name:'Toadflax',    seed:'Toadflax seed',    grimy:'Grimy toadflax',    clean:'Toadflax',    lo:43,hi:80,lvl:38,xp:38.5, pxp:34,  unf:'Toadflax potion (unf)'},
+  {name:'Irit leaf',   seed:'Irit seed',        grimy:'Grimy irit leaf',   clean:'Irit leaf',   lo:46,hi:80,lvl:44,xp:48.5, pxp:43,  unf:'Irit potion (unf)'},
+  {name:'Avantoe',     seed:'Avantoe seed',     grimy:'Grimy avantoe',     clean:'Avantoe',     lo:50,hi:80,lvl:50,xp:61.5, pxp:54.5,unf:'Avantoe potion (unf)'},
+  {name:'Kwuarm',      seed:'Kwuarm seed',      grimy:'Grimy kwuarm',      clean:'Kwuarm',      lo:54,hi:80,lvl:56,xp:78,   pxp:69,  unf:'Kwuarm potion (unf)'},
+  {name:'Snapdragon',  seed:'Snapdragon seed',  grimy:'Grimy snapdragon',  clean:'Snapdragon',  lo:57,hi:80,lvl:62,xp:98.5, pxp:87.5,unf:'Snapdragon potion (unf)'},
+  {name:'Huasca',      seed:'Huasca seed',      grimy:'Grimy huasca',      clean:'Huasca',      lo:58,hi:80,lvl:65,xp:110,  pxp:86.5,unf:'Huasca potion (unf)'},
+  {name:'Cadantine',   seed:'Cadantine seed',   grimy:'Grimy cadantine',   clean:'Cadantine',   lo:60,hi:80,lvl:67,xp:120,  pxp:106.5,unf:'Cadantine potion (unf)'},
+  {name:'Lantadyme',   seed:'Lantadyme seed',   grimy:'Grimy lantadyme',   clean:'Lantadyme',   lo:64,hi:80,lvl:73,xp:151.5,pxp:134.5,unf:'Lantadyme potion (unf)'},
+  {name:'Dwarf weed',  seed:'Dwarf weed seed',  grimy:'Grimy dwarf weed',  clean:'Dwarf weed',  lo:67,hi:80,lvl:79,xp:192,  pxp:170.5,unf:'Dwarf weed potion (unf)'},
+  {name:'Torstol',     seed:'Torstol seed',     grimy:'Grimy torstol',     clean:'Torstol',     lo:71,hi:80,lvl:85,xp:224.5,pxp:199.5,unf:'Torstol potion (unf)'},
 ];
 const PATCHES=[
-  {id:'ardougne',  name:'Ardougne',           prot:false,diary:null,      dbonus:0},
-  {id:'catherby',  name:'Catherby',            prot:false,diary:'kandarin',dbonus:0.1, dlabel:'Hard Kandarin diary (+10%)'},
-  {id:'falador',   name:'Falador',             prot:false,diary:null,      dbonus:0},
-  {id:'morytania', name:'Morytania',           prot:false,diary:null,      dbonus:0},
-  {id:'hosidius',  name:'Hosidius',            prot:true, diary:'kourend', dbonus:0.05,dlabel:'Hard Kourend diary (+5%)'},
-  {id:'weiss',     name:'Weiss',               prot:true, diary:null,      dbonus:0},
-  {id:'trollheim', name:'Trollheim',           prot:true, diary:null,      dbonus:0},
-  {id:'harmony',   name:'Harmony Island',      prot:true, diary:null,      dbonus:0},
-  {id:'civitas',   name:'Civitas illa Fortis', prot:true, diary:null,      dbonus:0},
-  {id:'guild',     name:'Farming Guild',       prot:false,diary:'kourend', dbonus:0.05,dlabel:'Hard Kourend diary (+5%)'},
+  // prot=disease free, kandarinBonus applied globally via dropdown, kourend via checkbox
+  // Notes: Hosidius=Easy Kourend diary, Harmony=Elite Morytania diary, Civitas=Fortis Colosseum Champion
+  {id:'ardougne',  name:'Ardougne',           prot:false,kourend:false},
+  {id:'catherby',  name:'Catherby',            prot:false,kandarin:true},  // gets global kandarin bonus
+  {id:'falador',   name:'Falador',             prot:false,kourend:false},
+  {id:'morytania', name:'Morytania',           prot:false,kourend:false},
+  {id:'hosidius',  name:'Hosidius',            prot:true, kourend:true, dlabel:'Req: Easy Kourend diary'},
+  {id:'weiss',     name:'Weiss',               prot:true, kourend:false},
+  {id:'trollheim', name:'Trollheim',           prot:true, kourend:false},
+  {id:'harmony',   name:'Harmony Island',      prot:true, kourend:false, dlabel:'Req: Elite Morytania diary'},
+  {id:'civitas',   name:'Civitas illa Fortis', prot:true, kourend:false, dlabel:'Req: Fortis Colosseum Champion'},
+  {id:'guild',     name:'Farming Guild',       prot:false,kourend:true,  dlabel:'Req: Hard Kourend diary (+5% yield)'},
 ];
 const CTS   ={'0':0,'0.05':10,'0.1':17,'0.15':25};
 const CDEATH={None:1,Compost:2,Supercompost:5,Ultracompost:10};
 const CLIVES={None:0,Compost:1,Supercompost:2,Ultracompost:3};
-const NEEDED=['Guam seed','Marrentill seed','Tarromin seed','Harralander seed','Ranarr seed','Toadflax seed','Irit seed','Avantoe seed','Kwuarm seed','Snapdragon seed','Huasca seed','Cadantine seed','Lantadyme seed','Dwarf weed seed','Torstol seed','Grimy guam leaf','Grimy marrentill','Grimy tarromin','Grimy harralander','Grimy ranarr weed','Grimy toadflax','Grimy irit leaf','Grimy avantoe','Grimy kwuarm','Grimy snapdragon','Grimy huasca','Grimy cadantine','Grimy lantadyme','Grimy dwarf weed','Grimy torstol','Guam leaf','Marrentill','Tarromin','Harralander','Ranarr weed','Toadflax','Irit leaf','Avantoe','Kwuarm','Snapdragon','Huasca','Cadantine','Lantadyme','Dwarf weed','Torstol','Ultracompost','Supercompost','Compost','Soul rune','Nature rune','Blood rune','Earth rune'];
+const NEEDED=['Guam seed','Marrentill seed','Tarromin seed','Harralander seed','Ranarr seed','Toadflax seed','Irit seed','Avantoe seed','Kwuarm seed','Snapdragon seed','Huasca seed','Cadantine seed','Lantadyme seed','Dwarf weed seed','Torstol seed','Grimy guam leaf','Grimy marrentill','Grimy tarromin','Grimy harralander','Grimy ranarr weed','Grimy toadflax','Grimy irit leaf','Grimy avantoe','Grimy kwuarm','Grimy snapdragon','Grimy huasca','Grimy cadantine','Grimy lantadyme','Grimy dwarf weed','Grimy torstol','Guam leaf','Marrentill','Tarromin','Harralander','Ranarr weed','Toadflax','Irit leaf','Avantoe','Kwuarm','Snapdragon','Huasca','Cadantine','Lantadyme','Dwarf weed','Torstol','Ultracompost','Supercompost','Compost','Soul rune','Nature rune','Blood rune','Earth rune','Guam potion (unf)','Marrentill potion (unf)','Tarromin potion (unf)','Harralander potion (unf)','Ranarr potion (unf)','Toadflax potion (unf)','Irit potion (unf)','Avantoe potion (unf)','Kwuarm potion (unf)','Snapdragon potion (unf)','Huasca potion (unf)','Cadantine potion (unf)','Lantadyme potion (unf)','Dwarf weed potion (unf)','Torstol potion (unf)','Vial of water'];
 
 // ── State ────────────────────────────────────────────────────────────────────
-let prices={}, nameToId={}, pOn={}, diary={kandarin:false,kourend:false};
+let prices={}, nameToId={}, pOn={};
 let sortCol='profit', sortDir=-1;
 let refreshTimer=null, countdownTimer=null, nextRefreshAt=0;
 const LS='osrs_herb_v2';
@@ -283,9 +328,10 @@ function save(){
   try{localStorage.setItem(LS,JSON.stringify({
     flvl:g('flvl').value, mlvl:g('mlvl').value,
     compost:g('compost').value, sell:g('sell').value, anima:g('anima').value,
+    kandarin:g('kandarin').value, kourend:g('kourend').checked,
     sec:g('sec').checked, fcape:g('fcape').checked,
     bottomless:g('bottomless').checked, resurrect:g('resurrect').checked,
-    pOn:{...pOn}, diary:{...diary}, sortCol, sortDir
+    pOn:{...pOn}, sortCol, sortDir
   }));}catch(e){}
 }
 function loadSaved(){
@@ -297,9 +343,9 @@ function loadSaved(){
     if(s.compost) g('compost').value=s.compost;
     if(s.sell)    g('sell').value=s.sell;
     if(s.anima)   g('anima').value=s.anima;
-    ['sec','fcape','bottomless','resurrect'].forEach(id=>{if(s[id]!==undefined)g(id).checked=s[id];});
+    ['sec','fcape','bottomless','resurrect','kourend'].forEach(id=>{if(s[id]!==undefined)g(id).checked=s[id];});
+    if(s.kandarin) g('kandarin').value=s.kandarin;
     if(s.pOn)   pOn={...s.pOn};
-    if(s.diary) diary={...s.diary};
     if(s.sortCol) sortCol=s.sortCol;
     if(s.sortDir) sortDir=s.sortDir;
   }catch(e){}
@@ -314,20 +360,17 @@ function buildPatches(){
     const card=document.createElement('div');
     card.className='pcard'+(pOn[p.id]?' on':'');
     card.id='pc-'+p.id;
-    let diary_html='';
-    if(p.diary){
-      diary_html=`<div class="pdiary"><label class="cb-row" onclick="event.stopPropagation()">
-        <input type="checkbox" ${diary[p.diary]?'checked':''}
-          onchange="diary['${p.diary}']=this.checked;syncDiary('${p.diary}');save();calc()"/>
-        <span>${p.dlabel}</span>
-      </label></div>`;
-    }
+    // Show requirement note if patch has one
+    const noteHtml=p.dlabel?`<div class="ptag" style="color:var(--text3);margin-top:2px;font-size:10px">${p.dlabel}</div>`:'';
     card.innerHTML=`<div class="ptop">
       <input type="checkbox" ${pOn[p.id]?'checked':''} onclick="event.stopPropagation()"
         onchange="pOn['${p.id}']=this.checked;refreshCard('${p.id}');save();calc()"/>
-      <div><div class="pname">${p.name}</div>
-      <div class="ptag">${p.prot?'🛡 Disease-free':'🌱 Standard'}</div></div>
-    </div>${diary_html}`;
+      <div>
+        <div class="pname">${p.name}</div>
+        <div class="ptag">${p.prot?'🛡 Disease-free':'🌱 Standard'}</div>
+        ${noteHtml}
+      </div>
+    </div>`;
     card.addEventListener('click',e=>{
       if(e.target.tagName==='INPUT')return;
       pOn[p.id]=!pOn[p.id];
@@ -335,13 +378,6 @@ function buildPatches(){
       refreshCard(p.id);save();calc();
     });
     grid.appendChild(card);
-  });
-}
-function syncDiary(key){
-  PATCHES.forEach(p=>{
-    if(p.diary!==key)return;
-    const c=document.getElementById('pc-'+p.id);
-    if(c){const cb=c.querySelector('.pdiary input');if(cb)cb.checked=diary[key];}
   });
 }
 function refreshCard(id){
@@ -395,21 +431,39 @@ function calc(){
   let bSurv=(1-drS)**3, bDeath=1-bSurv;
   if(useRes){const d=drS,s=1-d;bDeath=((1-(1-d)**4)*(1-chR))+6*d*d*s*s+4*d*d*d*s+d**4;bSurv=1-bDeath;}
   const lives=3+CLIVES[compost];
+
+  // Diary bonuses — Kandarin is global dropdown (CTS bonus), Kourend is checkbox
+  const kandarinCTS=parseInt(g('kandarin').value)||0; // flat CTS bonus for Catherby only
+  const useKourend=g('kourend').checked;              // +5% yield at Hosidius and Guild
+  const kourendCTS=useKourend?CTS['0.05']:0;          // =10 flat CTS points
+
   const active=PATCHES.filter(p=>pOn[p.id]);
   g('m-count').textContent=active.length;
+  // Update herb price column header based on sell type
+  const hpriceHeader=document.getElementById('th-hprice');
+  if(hpriceHeader) hpriceHeader.textContent=sell==='Unf'?'Unf. potion price':sell==='Clean'?'Clean price':'Grimy price';
 
   const rows=HERBS.map(h=>{
     const sp=prices[h.seed]||0;
-    const hp=sell==='Clean'?(prices[h.clean]||0):(prices[h.grimy]||0);
+    const hp=sell==='Clean'?(prices[h.clean]||0):
+               sell==='Unf'?(prices[h.unf]||0):
+               (prices[h.grimy]||0);
     const rv=useRes&&sp>0?(sp*chR>rCost):null;
     let tY=0,tP=0,tX=0,tDR=0;
     active.forEach(pd=>{
       const dr=pd.prot?0:bDeath, surv=1-dr;
-      const ctsB=(pd.diary&&diary[pd.diary])?(CTS[String(pd.dbonus)]||0):0;
+      // Apply correct CTS bonus per patch type
+      // Catherby gets the Kandarin diary bonus (global dropdown)
+      // Hosidius and Guild get Kourend diary bonus (+10 CTS if Hard Kourend diary)
+      const ctsB=pd.kandarin?kandarinCTS:(pd.kourend?kourendCTS:0);
       const rawY=estYield(flvl,h.lo,h.hi,lives,itemB,ctsB,attasB);
       const tY2=pd.prot?rawY:rawY*bSurv;
-      tY+=tY2; tP+=hp*tY2-(cc+sp+(!pd.prot&&useRes?rCost*dr:0));
-      tX+=tY2*h.xp+h.pxp*surv; tDR+=dr;
+      // XP: harvest XP * expected yield + plant XP * survival rate (plant XP only earned if patch survives)
+      // plantXp always uses global patchSurvivalRate (bSurv) per Lua source
+      const patchXp=tY2*h.xp+h.pxp*bSurv;
+      const vialCost=sell==='Unf'?(prices['Vial of water']||0):0;
+      tY+=tY2; tP+=hp*tY2-(cc+sp+(!pd.prot&&useRes?rCost*dr:0))-(tY2*vialCost);
+      tX+=patchXp; tDR+=dr;
     });
     return{name:h.name,lvl:h.lvl,seed:sp,hprice:hp,
       death:active.length?tDR/active.length:0,
@@ -423,7 +477,7 @@ function calc(){
   const mp=g('m-profit');
   mp.textContent=best?fmt(best.profit):'—';
   mp.className='mval '+(!best||best.profit>=0?'pos':'neg');
-  g('m-xp').textContent=best?Math.round(best.xp).toLocaleString():'—';
+  g('m-xp').textContent=best?best.xp.toFixed(1):'—';
 
   document.querySelectorAll('th[id^="th-"]').forEach(t=>t.classList.remove('sort-on'));
   const st=document.getElementById('th-'+sortCol);
@@ -432,10 +486,263 @@ function calc(){
   g('tbody').innerHTML=rows.map(r=>{
     const pc=r.profit>=0?'pos-t':'neg-t';
     const rb=r.res===true?'<span class="badge b-yes">Worth it</span>':r.res===false?'<span class="badge b-no">Skip</span>':'<span class="na">n/a</span>';
-    return`<tr><td>${r.name}</td><td class="r" style="color:var(--text3)">${r.lvl}</td><td class="r">${fmt(r.seed)}</td><td class="r">${fmt(r.hprice)}</td><td class="r">${(r.death*100).toFixed(1)}%</td><td class="r">${r.yield.toFixed(2)}</td><td>${rb}</td><td class="r ${pc}">${fmt(r.profit)}</td><td class="r">${Math.round(r.xp).toLocaleString()}</td><td class="r">${isFinite(r.gpxp)?r.gpxp.toFixed(1):'—'}</td></tr>`;
+    return`<tr><td>${r.name}</td><td class="r" style="color:var(--text3)">${r.lvl}</td><td class="r">${fmt(r.seed)}</td><td class="r">${fmt(r.hprice)}</td><td class="r">${(r.death*100).toFixed(3)}%</td><td class="r">${r.yield.toFixed(3)}</td><td>${rb}</td><td class="r ${pc}">${fmt(r.profit)}</td><td class="r">${r.xp.toFixed(1)}</td><td class="r">${isFinite(r.gpxp)?r.gpxp.toFixed(2):'—'}</td></tr>`;
   }).join('');
+  buildBreakdowns();
 }
 function srt(col){if(sortCol===col)sortDir*=-1;else{sortCol=col;sortDir=-1;}save();calc();}
+
+// ── Per-patch breakdown tables ────────────────────────────────────────────────
+
+// Per-breakdown sort state and row cache
+const bdSort={};  // { grpId: {col,dir} }
+const bdRows={};  // { grpId: rows[] }
+
+function srtBd(id,col){
+  if(!bdSort[id]) bdSort[id]={col:'profit',dir:-1};
+  const s=bdSort[id];
+  if(s.col===col) s.dir*=-1; else{s.col=col;s.dir=-1;}
+  renderBdBody(id);
+}
+
+function renderBdBody(id){
+  const s=bdSort[id]||{col:'profit',dir:-1};
+  const rows=[...bdRows[id]].sort((a,b)=>s.dir*(a[s.col]>b[s.col]?1:a[s.col]<b[s.col]?-1:0));
+  const body=document.getElementById('bd-body-'+id);
+  if(!body) return;
+  const hpriceLabel=body.getAttribute('data-hprice')||'Herb price';
+  // Update header sort indicators
+  body.querySelectorAll('th[data-col]').forEach(th=>{
+    const arrow=th.querySelector('.bd-arrow');
+    if(!arrow) return;
+    if(th.getAttribute('data-col')===s.col){
+      arrow.textContent=s.dir===1?' ▲':' ▼';
+      th.classList.add('sort-on');
+    } else {
+      arrow.textContent=' ⇅';
+      th.classList.remove('sort-on');
+    }
+  });
+  // Re-render tbody only
+  const tbody=body.querySelector('tbody');
+  if(!tbody) return;
+  tbody.innerHTML=rows.map(r=>{
+    const pc=r.profit>=0?'pos-t':'neg-t';
+    const rb=r.res===true?'<span class="badge b-yes">Worth it</span>':
+             r.res===false?'<span class="badge b-no">Skip</span>':
+             '<span class="na">n/a</span>';
+    return '<tr><td>'+r.name+'</td>'+
+      '<td class="r" style="color:var(--text3)">'+r.lvl+'</td>'+
+      '<td class="r">'+fmt(r.seed)+'</td>'+
+      '<td class="r">'+fmt(r.hprice)+'</td>'+
+      '<td class="r">'+(r.death*100).toFixed(3)+'%</td>'+
+      '<td class="r">'+r.yield.toFixed(3)+'</td>'+
+      '<td>'+rb+'</td>'+
+      '<td class="r '+pc+'">'+fmt(r.profit)+'</td>'+
+      '<td class="r">'+r.xp.toFixed(1)+'</td>'+
+      '<td class="r">'+(isFinite(r.gpxp)?r.gpxp.toFixed(2):'—')+'</td>'+
+      '</tr>';
+  }).join('');
+}
+
+function toggleBreakdown(id){
+  const body=document.getElementById('bd-body-'+id);
+  const title=document.getElementById('bd-title-'+id);
+  if(!body||!title) return;
+  const open=body.classList.toggle('open');
+  title.classList.toggle('open',open);
+}
+
+// Build the per-patch breakdown for a single patch definition and current settings.
+// Returns an array of row data objects (same shape as main calc rows) but for one patch.
+function calcPatchRows(pd, flvl, mlvl, compost, sell, anima, useSec, useCape, useBot, useRes,
+                       bSurv, bDeath, lives, itemB, attasB, kandarinCTS, kourendCTS,
+                       cc, rCost, chR) {
+  return HERBS.map(h=>{
+    const sp=prices[h.seed]||0;
+    const hp=sell==='Clean'?(prices[h.clean]||0):sell==='Unf'?(prices[h.unf]||0):(prices[h.grimy]||0);
+    const rv=useRes&&sp>0?(sp*chR>rCost):null;
+    const dr=pd.prot?0:bDeath;
+    const ctsB=pd.kandarin?kandarinCTS:(pd.kourend?kourendCTS:0);
+    const rawY=estYield(flvl,h.lo,h.hi,lives,itemB,ctsB,attasB);
+    const tY2=pd.prot?rawY:rawY*bSurv;
+    const patchXp=tY2*h.xp+h.pxp*bSurv;
+    const vialCost=sell==='Unf'?(prices['Vial of water']||0):0;
+    const profit=hp*tY2-(cc+sp+(!pd.prot&&useRes?rCost*dr:0))-(tY2*vialCost);
+    return{name:h.name,lvl:h.lvl,seed:sp,hprice:hp,
+           death:dr,yield:tY2,res:rv,profit,xp:patchXp,gpxp:profit/patchXp};
+  });
+}
+
+function makeBreakdownTable(id, rows, hpriceLabel){
+  bdRows[id]=rows;
+  if(!bdSort[id]) bdSort[id]={col:'profit',dir:-1};
+  const s=bdSort[id];
+  const sorted=[...rows].sort((a,b)=>s.dir*(a[s.col]>b[s.col]?1:a[s.col]<b[s.col]?-1:0));
+
+  // Build a sortable th — uses string concat to avoid quote escaping issues
+  function th(col,label,cls){
+    const active=s.col===col;
+    const arrow=active?(s.dir===1?' ▲':' ▼'):' ⇅';
+    const ca=active?' sort-on':'';
+    const c=cls?' class="'+cls+'"':'';
+    return '<th'+c+' data-col="'+col+'" onclick="srtBd(\''+id+'\',\''+col+'\')" style="cursor:pointer;user-select:none">'+
+           label+'<span class="bd-arrow'+ca+'">'+arrow+'</span></th>';
+  }
+
+  const hdr='<thead><tr>'+
+    th('name','Herb','')+
+    th('lvl','Lvl req','r')+
+    th('seed','Seed cost','r')+
+    th('hprice',hpriceLabel,'r')+
+    th('death','Death %','r')+
+    th('yield','Avg yield','r')+
+    th('res','Resurrect?','')+
+    th('profit','Profit per patch','r')+
+    th('xp','XP per patch','r')+
+    th('gpxp','GP / XP','r')+
+    '</tr></thead>';
+
+  const tbody=sorted.map(r=>{
+    const pc=r.profit>=0?'pos-t':'neg-t';
+    const rb=r.res===true?'<span class="badge b-yes">Worth it</span>':
+             r.res===false?'<span class="badge b-no">Skip</span>':
+             '<span class="na">n/a</span>';
+    return '<tr><td>'+r.name+'</td>'+
+      '<td class="r" style="color:var(--text3)">'+r.lvl+'</td>'+
+      '<td class="r">'+fmt(r.seed)+'</td>'+
+      '<td class="r">'+fmt(r.hprice)+'</td>'+
+      '<td class="r">'+(r.death*100).toFixed(3)+'%</td>'+
+      '<td class="r">'+r.yield.toFixed(3)+'</td>'+
+      '<td>'+rb+'</td>'+
+      '<td class="r '+pc+'">'+fmt(r.profit)+'</td>'+
+      '<td class="r">'+r.xp.toFixed(1)+'</td>'+
+      '<td class="r">'+(isFinite(r.gpxp)?r.gpxp.toFixed(2):'—')+'</td>'+
+      '</tr>';
+  }).join('');
+  return '<table>'+hdr+'<tbody>'+tbody+'</tbody></table>';
+}
+
+function buildBreakdowns(){
+  if(!Object.keys(prices).length) return;
+
+  const flvl=+g('flvl').value||99, mlvl=+g('mlvl').value||99;
+  const compost=g('compost').value, sell=g('sell').value, anima=g('anima').value;
+  const useSec=g('sec').checked, useCape=g('fcape').checked;
+  const useBot=g('bottomless').checked, useRes=g('resurrect').checked;
+
+  const cc=compost!=='None'?(prices[compost]||0)*(useBot?.5:1):0;
+  const rCost=(prices['Soul rune']||0)*8+(prices['Nature rune']||0)*12+
+              (prices['Blood rune']||0)*8+(prices['Earth rune']||0)*25;
+  const chR=interp(-111,191,mlvl);
+  let itemB=0; if(useSec)itemB+=.1; if(useCape)itemB+=.05;
+  const attasB=anima==='Attas'?.05:0, dmod=anima==='Iasor'?.2:1;
+  const drS=(Math.floor(Math.floor(27/CDEATH[compost])*dmod)+1)/128;
+  let bSurv=(1-drS)**3, bDeath=1-bSurv;
+  if(useRes){const d=drS,s=1-d;bDeath=((1-(1-d)**4)*(1-chR))+6*d*d*s*s+4*d*d*d*s+d**4;bSurv=1-bDeath;}
+  const lives=3+CLIVES[compost];
+  const kandarinCTS=parseInt(g('kandarin').value)||0;
+  const useKourend=g('kourend').checked;
+  const kourendCTS=useKourend?CTS['0.05']:0;
+
+  const hpriceLabel=sell==='Unf'?'Unf. potion price':sell==='Clean'?'Clean price':'Grimy price';
+  const farmLvl=flvl;
+
+  // Build one section per ACTIVE patch
+  // Group the patches into logical groups matching the wiki's presentation:
+  //   1. Hosidius (prot + kourend bonus) — if active and kourend checked
+  //   2. Hosidius (prot, no bonus) — if active and kourend NOT checked  
+  //   3. Other protected patches — grouped together
+  //   4. Catherby (std + kandarin bonus) — if active and kandarin > 0
+  //   5. Farming Guild (std + kourend bonus) — if active and kourend checked
+  //   6. Remaining standard patches — grouped
+
+  const active=PATCHES.filter(p=>pOn[p.id]);
+
+  // Separate into logical groups
+  const groups=[];
+
+  // Hosidius
+  const hosidius=active.find(p=>p.id==='hosidius');
+  if(hosidius){
+    const bonus=useKourend?'+5% Kourend diary bonus':'';
+    const label=bonus
+      ?`Hosidius (Protected${bonus?', '+bonus:''})`
+      :'Hosidius (Protected)';
+    groups.push({label, patches:[hosidius]});
+  }
+
+  // Other protected patches grouped
+  const otherProt=active.filter(p=>p.prot&&p.id!=='hosidius');
+  if(otherProt.length>0){
+    const names=otherProt.map(p=>p.name).join(', ');
+    groups.push({label:`${names} (Protected)`, patches:otherProt});
+  }
+
+  // Catherby
+  const catherby=active.find(p=>p.id==='catherby');
+  if(catherby){
+    const tier=['None','Medium (+5%)','Hard (+10%)','Elite (+15%)'][[0,10,17,25].indexOf(kandarinCTS)];
+    const label=kandarinCTS>0
+      ?`Catherby (Kandarin diary ${tier||'+'+kandarinCTS+' CTS'})`
+      :'Catherby (Standard)';
+    groups.push({label, patches:[catherby]});
+  }
+
+  // Farming Guild
+  const guild=active.find(p=>p.id==='guild');
+  if(guild){
+    const label=useKourend?'Farming Guild (+5% Kourend diary bonus)':'Farming Guild (Standard)';
+    groups.push({label, patches:[guild]});
+  }
+
+  // Remaining standard patches (excluding catherby and guild which are already handled)
+  const stdRest=active.filter(p=>!p.prot&&p.id!=='catherby'&&p.id!=='guild');
+  if(stdRest.length>0){
+    const names=stdRest.length===1?stdRest[0].name:`${stdRest.length} standard patches`;
+    groups.push({label:`${names}`, patches:stdRest});
+  }
+
+  const section=g('breakdown-section');
+  if(!section) return;
+
+  // Preserve open state
+  const openState={};
+  section.querySelectorAll('.breakdown-body').forEach(el=>{
+    openState[el.id]=el.classList.contains('open');
+  });
+
+  let html='<div style="font-size:13px;font-weight:500;color:var(--gold);margin-bottom:10px">Per-patch breakdown — click to expand</div>';
+
+  groups.forEach((grp,i)=>{
+    const id='grp'+i;
+    const wasOpen=openState['bd-body-'+id]||false;
+    // Compute rows for this group — average across patches in group
+    // (for a group of same-type patches, all rows are identical so just use first)
+    const repPatch=grp.patches[0];
+    const rows=calcPatchRows(repPatch, flvl, mlvl, compost, sell, anima,
+                             useSec, useCape, useBot, useRes,
+                             bSurv, bDeath, lives, itemB, attasB,
+                             kandarinCTS, kourendCTS,
+                             cc, rCost, chR);
+    rows.sort((a,b)=>b.profit-a.profit);
+    const patchCount=grp.patches.length;
+    const countNote=patchCount>1?` · ${patchCount} patches`:'';
+    const patchLabel=`Herb yield at ${grp.label} at level ${farmLvl} Farming${countNote}`;
+    const tbl=makeBreakdownTable(id, rows, hpriceLabel);
+    html+=`
+    <div id="bd-title-${id}" class="breakdown-title${wasOpen?' open':''}" onclick="toggleBreakdown('${id}')">
+      <span>${patchLabel}</span>
+      <span class="arrow">▼</span>
+    </div>
+    <div id="bd-body-${id}" class="breakdown-body${wasOpen?' open':''}" data-hprice="${hpriceLabel}">
+      <div class="scroll-hint">← scroll table sideways →</div>
+      ${tbl}
+    </div>`;
+  });
+
+  section.innerHTML=html;
+}
 
 // ── Auto-refresh countdown ────────────────────────────────────────────────────
 function startCountdown(){
