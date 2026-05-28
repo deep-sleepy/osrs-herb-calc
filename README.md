@@ -2,7 +2,7 @@
 
 A lightweight, mobile-friendly herb run profit calculator for Old School RuneScape with **live Grand Exchange prices** pulled directly from the [OSRS Wiki real-time prices API](https://oldschool.runescape.wiki/w/RuneScape:Real-time_Prices).
 
-**[➡ Open the Calculator](https://yourusername.github.io/osrs-herb-calc)**
+**[➡ Open the Calculator](https://deep-sleepy.github.io/osrs-herb-calc)**
 
 ---
 
