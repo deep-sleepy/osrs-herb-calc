@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+<title>OSRS Herb Run Calc</title>
+<style>
+:root {
+  --bg:#1a1a2e; --bg2:#16213e; --bg3:#0f3460; --card:#1e2a45;
+  --border:#2e4070; --gold:#c8a84b; --gold2:#e8c86c;
+  --green:#4caf7d; --red:#e05252; --yellow:#e8c34a;
+  --text:#d4c9a8; --text2:#8a9bb5; --text3:#5a6b85;
+  --font:'Segoe UI',system-ui,sans-serif;
+  --radius:6px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15px;min-height:100vh}
+
+/* ── Header ── */
+header{
+  background:var(--bg2);border-bottom:1px solid var(--border);
+  padding:11px 14px;display:flex;align-items:center;justify-content:space-between;
+  gap:8px;position:sticky;top:0;z-index:100;
+}
+.h-left{display:flex;align-items:center;gap:10px}
+.h-title{font-size:16px;font-weight:600;color:var(--gold2)}
+.dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.dot.ok{background:var(--green);box-shadow:0 0 5px var(--green)}
+.dot.err{background:var(--red)}
+.dot.load{background:var(--yellow);animation:pulse .9s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.h-right{display:flex;align-items:center;gap:8px;flex-shrink:0}
+#status-text{font-size:12px;color:var(--text2)}
+#next-ref{font-size:11px;color:var(--text3);display:none}
+
+/* ── Buttons ── */
+.btn{
+  background:var(--bg3);border:1px solid var(--border);color:var(--text);
+  padding:7px 13px;border-radius:var(--radius);font-size:13px;cursor:pointer;
+  font-family:var(--font);min-height:36px;display:inline-flex;align-items:center;gap:5px;
+}
+.btn:active{opacity:.7}
+.btn-gold{border-color:var(--gold);color:var(--gold)}
+
+/* ── Settings panel ── */
+#settings-panel{
+  background:var(--bg2);border-bottom:1px solid var(--border);
+  overflow:hidden;max-height:0;transition:max-height .3s ease;
+}
+#settings-panel.open{max-height:2000px}
+.settings-inner{padding:14px;display:grid;grid-template-columns:1fr 1fr;gap:12px 16px}
+@media(min-width:600px){.settings-inner{grid-template-columns:1fr 1fr 1fr}}
+@media(min-width:900px){.settings-inner{grid-template-columns:repeat(4,1fr)}}
+
+.slabel{
+  font-size:11px;font-weight:600;color:var(--gold);text-transform:uppercase;
+  letter-spacing:.07em;grid-column:1/-1;margin-top:4px;
+}
+.slabel:first-child{margin-top:0}
+.ctrl label{display:block;font-size:12px;color:var(--text2);margin-bottom:4px}
+select,input[type=number]{
+  width:100%;background:var(--bg3);border:1px solid var(--border);color:var(--text);
+  padding:8px 10px;border-radius:var(--radius);font-size:14px;font-family:var(--font);
+  min-height:40px;
+}
+select:focus,input:focus{outline:none;border-color:var(--gold)}
+option{background:var(--bg3)}
+
+.cb-row{
+  display:flex;align-items:center;gap:9px;font-size:14px;cursor:pointer;
+  padding:6px 0;min-height:36px;
+}
+.cb-row input{cursor:pointer;accent-color:var(--gold);width:17px;height:17px;flex-shrink:0}
+
+/* ── Patch cards ── */
+.patch-section{grid-column:1/-1}
+.patch-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:4px}
+@media(min-width:500px){.patch-grid{grid-template-columns:repeat(3,1fr)}}
+@media(min-width:750px){.patch-grid{grid-template-columns:repeat(5,1fr)}}
+
+.pcard{
+  background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);
+  padding:10px;cursor:pointer;transition:border-color .12s;
+}
+.pcard:active{opacity:.8}
+.pcard.on{border-color:var(--green);background:rgba(76,175,125,.06)}
+.ptop{display:flex;align-items:flex-start;gap:8px}
+.ptop input{cursor:pointer;accent-color:var(--green);width:17px;height:17px;flex-shrink:0;margin-top:1px}
+.pname{font-size:13px;font-weight:500;line-height:1.3}
+.pcard.on .pname{color:var(--green)}
+.ptag{font-size:11px;color:var(--text3);margin-top:2px}
+.pdiary{margin-top:8px;padding-top:8px;border-top:1px solid var(--border)}
+.pdiary .cb-row{font-size:12px;padding:0;min-height:auto}
+.pdiary .cb-row input{width:15px;height:15px}
+
+/* ── Metrics ── */
+.metrics{
+  display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:12px 12px 0;
+}
+@media(min-width:500px){.metrics{grid-template-columns:repeat(4,1fr)}}
+.metric{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:11px 12px}
+.mlabel{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px}
+.mval{font-size:20px;font-weight:600;color:var(--gold2);line-height:1.1}
+.mval.pos{color:var(--green)}
+.mval.neg{color:var(--red)}
+
+/* ── Table area ── */
+.table-wrap{padding:10px 12px 24px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.tbl-meta{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:4px}
+.ts{font-size:11px;color:var(--text3)}
+.tbl-note{font-size:11px;color:var(--text3)}
+
+table{width:100%;border-collapse:collapse;min-width:640px}
+thead tr{background:var(--bg2)}
+th{
+  padding:8px 9px;text-align:left;font-size:11px;font-weight:600;color:var(--gold);
+  text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border);
+  cursor:pointer;user-select:none;white-space:nowrap;
+}
+th:active{opacity:.7}
+.sort-on{color:var(--gold2) !important}
+th.r,td.r{text-align:right}
+td{padding:9px 9px;border-bottom:1px solid rgba(46,64,112,.35);font-size:13px;white-space:nowrap}
+tr:last-child td{border-bottom:none}
+
+.pos-t{color:var(--green);font-weight:500}
+.neg-t{color:var(--red);font-weight:500}
+.badge{display:inline-block;font-size:10px;font-weight:600;padding:2px 7px;border-radius:10px}
+.b-yes{background:rgba(76,175,125,.18);color:var(--green);border:1px solid rgba(76,175,125,.35)}
+.b-no{background:rgba(224,82,82,.13);color:var(--red);border:1px solid rgba(224,82,82,.28)}
+.na{color:var(--text3);font-size:11px}
+
+/* ── Scroll hint on mobile ── */
+.scroll-hint{
+  font-size:11px;color:var(--text3);text-align:center;
+  padding:4px 0 0;display:none;
+}
+@media(max-width:680px){.scroll-hint{display:block}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="h-left">
+    <div class="dot load" id="dot"></div>
+    <span class="h-title">🌿 Herb Run</span>
+    <span id="status-text" style="font-size:12px;color:var(--text2)">Loading…</span>
+  </div>
+  <div class="h-right">
+    <span id="next-ref"></span>
+    <button class="btn" onclick="fetchPrices(true)">↺ Refresh</button>
+    <button class="btn btn-gold" id="settings-btn" onclick="toggleSettings()">⚙ Settings</button>
+  </div>
+</header>
+
+<!-- Collapsible settings -->
+<div id="settings-panel">
+  <div class="settings-inner">
+
+    <div class="slabel">Levels</div>
+    <div class="ctrl"><label>Farming level</label><input type="number" id="flvl" value="99" min="1" max="99"/></div>
+    <div class="ctrl"><label>Magic level</label><input type="number" id="mlvl" value="99" min="1" max="99"/></div>
+
+    <div class="slabel">Setup</div>
+    <div class="ctrl"><label>Compost</label>
+      <select id="compost">
+        <option value="None">None</option>
+        <option value="Compost">Compost</option>
+        <option value="Supercompost">Supercompost</option>
+        <option value="Ultracompost" selected>Ultracompost</option>
+      </select>
+    </div>
+    <div class="ctrl"><label>Sell as</label>
+      <select id="sell">
+        <option value="Grimy" selected>Grimy</option>
+        <option value="Clean">Clean</option>
+      </select>
+    </div>
+    <div class="ctrl"><label>Anima plant</label>
+      <select id="anima">
+        <option value="None">None</option>
+        <option value="Iasor">Iasor (−80% death)</option>
+        <option value="Attas">Attas (+5% yield)</option>
+      </select>
+    </div>
+
+    <div class="slabel">Equipment</div>
+    <label class="cb-row"><input type="checkbox" id="sec" checked/> Magic secateurs (+10%)</label>
+    <label class="cb-row"><input type="checkbox" id="fcape"/> Farming cape (+5%)</label>
+    <label class="cb-row"><input type="checkbox" id="bottomless" checked/> Bottomless bucket</label>
+    <label class="cb-row"><input type="checkbox" id="resurrect"/> Resurrect Crops</label>
+
+    <div class="patch-section">
+      <div class="slabel" style="margin-bottom:6px">Herb Patches — tap to toggle</div>
+      <div class="patch-grid" id="patch-grid"></div>
+    </div>
+
+    <div style="grid-column:1/-1;padding-top:4px">
+      <button class="btn btn-gold" style="width:100%" onclick="toggleSettings()">Done ✓</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- Summary cards -->
+<div class="metrics">
+  <div class="metric"><div class="mlabel">Patches</div><div class="mval" id="m-count">—</div></div>
+  <div class="metric"><div class="mlabel">Best herb</div><div class="mval" id="m-best" style="font-size:14px;padding-top:4px">—</div></div>
+  <div class="metric"><div class="mlabel">Best herb profit</div><div class="mval" id="m-profit">—</div></div>
+  <div class="metric"><div class="mlabel">Best herb XP</div><div class="mval" id="m-xp">—</div></div>
+</div>
+
+<!-- Table -->
+<div class="table-wrap">
+  <div class="tbl-meta">
+    <span class="ts" id="ts"></span>
+    <span class="tbl-note">5-min avg · auto-refresh 5min</span>
+  </div>
+  <div class="scroll-hint">← scroll table sideways →</div>
+  <table>
+    <thead><tr>
+      <th id="th-name"   onclick="srt('name')">Herb</th>
+      <th class="r">Req</th>
+      <th class="r" id="th-seed"   onclick="srt('seed')">Seed</th>
+      <th class="r" id="th-hprice" onclick="srt('hprice')">Price</th>
+      <th class="r" id="th-death"  onclick="srt('death')">Death%</th>
+      <th class="r" id="th-yield"  onclick="srt('yield')">Yield</th>
+      <th           id="th-res"    onclick="srt('res')">Revive?</th>
+      <th class="r" id="th-profit" onclick="srt('profit')">Profit</th>
+      <th class="r" id="th-xp"     onclick="srt('xp')">XP</th>
+      <th class="r" id="th-gpxp"   onclick="srt('gpxp')">GP/XP</th>
+    </tr></thead>
+    <tbody id="tbody">
+      <tr><td colspan="10" style="text-align:center;padding:40px;color:var(--text3)">Loading prices…</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<script>
+// ── Data ─────────────────────────────────────────────────────────────────────
+const HERBS=[
+  {name:'Guam leaf',   seed:'Guam seed',       grimy:'Grimy guam leaf',   clean:'Guam leaf',   lo:25,hi:80,lvl:9, xp:12.5, pxp:11},
+  {name:'Marrentill',  seed:'Marrentill seed',  grimy:'Grimy marrentill',  clean:'Marrentill',  lo:28,hi:80,lvl:14,xp:13.5, pxp:13.5},
+  {name:'Tarromin',    seed:'Tarromin seed',    grimy:'Grimy tarromin',    clean:'Tarromin',    lo:31,hi:80,lvl:19,xp:16,   pxp:16},
+  {name:'Harralander', seed:'Harralander seed', grimy:'Grimy harralander', clean:'Harralander', lo:36,hi:80,lvl:26,xp:24,   pxp:21.5},
+  {name:'Ranarr weed', seed:'Ranarr seed',      grimy:'Grimy ranarr weed', clean:'Ranarr weed', lo:39,hi:80,lvl:32,xp:30.5, pxp:27},
+  {name:'Toadflax',    seed:'Toadflax seed',    grimy:'Grimy toadflax',    clean:'Toadflax',    lo:43,hi:80,lvl:38,xp:38.5, pxp:34},
+  {name:'Irit leaf',   seed:'Irit seed',        grimy:'Grimy irit leaf',   clean:'Irit leaf',   lo:46,hi:80,lvl:44,xp:43,   pxp:43},
+  {name:'Avantoe',     seed:'Avantoe seed',     grimy:'Grimy avantoe',     clean:'Avantoe',     lo:50,hi:80,lvl:50,xp:54.5, pxp:54.5},
+  {name:'Kwuarm',      seed:'Kwuarm seed',      grimy:'Grimy kwuarm',      clean:'Kwuarm',      lo:54,hi:80,lvl:56,xp:69,   pxp:69},
+  {name:'Snapdragon',  seed:'Snapdragon seed',  grimy:'Grimy snapdragon',  clean:'Snapdragon',  lo:57,hi:80,lvl:62,xp:98.5, pxp:98.5},
+  {name:'Huasca',      seed:'Huasca seed',      grimy:'Grimy huasca',      clean:'Huasca',      lo:58,hi:80,lvl:65,xp:110,   pxp:110},
+  {name:'Cadantine',   seed:'Cadantine seed',   grimy:'Grimy cadantine',   clean:'Cadantine',   lo:60,hi:80,lvl:67,xp:106.5,pxp:106.5},
+  {name:'Lantadyme',   seed:'Lantadyme seed',   grimy:'Grimy lantadyme',   clean:'Lantadyme',   lo:64,hi:80,lvl:73,xp:151.5,pxp:151.5},
+  {name:'Dwarf weed',  seed:'Dwarf weed seed',  grimy:'Grimy dwarf weed',  clean:'Dwarf weed',  lo:67,hi:80,lvl:79,xp:170.5,pxp:170.5},
+  {name:'Torstol',     seed:'Torstol seed',     grimy:'Grimy torstol',     clean:'Torstol',     lo:71,hi:80,lvl:85,xp:199.5,pxp:199.5},
+];
+const PATCHES=[
+  {id:'ardougne',  name:'Ardougne',           prot:false,diary:null,      dbonus:0},
+  {id:'catherby',  name:'Catherby',            prot:false,diary:'kandarin',dbonus:0.1, dlabel:'Hard Kandarin diary (+10%)'},
+  {id:'falador',   name:'Falador',             prot:false,diary:null,      dbonus:0},
+  {id:'morytania', name:'Morytania',           prot:false,diary:null,      dbonus:0},
+  {id:'hosidius',  name:'Hosidius',            prot:true, diary:'kourend', dbonus:0.05,dlabel:'Hard Kourend diary (+5%)'},
+  {id:'weiss',     name:'Weiss',               prot:true, diary:null,      dbonus:0},
+  {id:'trollheim', name:'Trollheim',           prot:true, diary:null,      dbonus:0},
+  {id:'harmony',   name:'Harmony Island',      prot:true, diary:null,      dbonus:0},
+  {id:'civitas',   name:'Civitas illa Fortis', prot:true, diary:null,      dbonus:0},
+  {id:'guild',     name:'Farming Guild',       prot:false,diary:'kourend', dbonus:0.05,dlabel:'Hard Kourend diary (+5%)'},
+];
+const CTS   ={'0':0,'0.05':10,'0.1':17,'0.15':25};
+const CDEATH={None:1,Compost:2,Supercompost:5,Ultracompost:10};
+const CLIVES={None:0,Compost:1,Supercompost:2,Ultracompost:3};
+const NEEDED=['Guam seed','Marrentill seed','Tarromin seed','Harralander seed','Ranarr seed','Toadflax seed','Irit seed','Avantoe seed','Kwuarm seed','Snapdragon seed','Huasca seed','Cadantine seed','Lantadyme seed','Dwarf weed seed','Torstol seed','Grimy guam leaf','Grimy marrentill','Grimy tarromin','Grimy harralander','Grimy ranarr weed','Grimy toadflax','Grimy irit leaf','Grimy avantoe','Grimy kwuarm','Grimy snapdragon','Grimy huasca','Grimy cadantine','Grimy lantadyme','Grimy dwarf weed','Grimy torstol','Guam leaf','Marrentill','Tarromin','Harralander','Ranarr weed','Toadflax','Irit leaf','Avantoe','Kwuarm','Snapdragon','Huasca','Cadantine','Lantadyme','Dwarf weed','Torstol','Ultracompost','Supercompost','Compost','Soul rune','Nature rune','Blood rune','Earth rune'];
+
+// ── State ────────────────────────────────────────────────────────────────────
+let prices={}, nameToId={}, pOn={}, diary={kandarin:false,kourend:false};
+let sortCol='profit', sortDir=-1;
+let refreshTimer=null, countdownTimer=null, nextRefreshAt=0;
+const LS='osrs_herb_v2';
+
+// ── Persist ──────────────────────────────────────────────────────────────────
+function save(){
+  try{localStorage.setItem(LS,JSON.stringify({
+    flvl:g('flvl').value, mlvl:g('mlvl').value,
+    compost:g('compost').value, sell:g('sell').value, anima:g('anima').value,
+    sec:g('sec').checked, fcape:g('fcape').checked,
+    bottomless:g('bottomless').checked, resurrect:g('resurrect').checked,
+    pOn:{...pOn}, diary:{...diary}, sortCol, sortDir
+  }));}catch(e){}
+}
+function loadSaved(){
+  try{
+    const s=JSON.parse(localStorage.getItem(LS)||'null');
+    if(!s)return;
+    if(s.flvl) g('flvl').value=s.flvl;
+    if(s.mlvl) g('mlvl').value=s.mlvl;
+    if(s.compost) g('compost').value=s.compost;
+    if(s.sell)    g('sell').value=s.sell;
+    if(s.anima)   g('anima').value=s.anima;
+    ['sec','fcape','bottomless','resurrect'].forEach(id=>{if(s[id]!==undefined)g(id).checked=s[id];});
+    if(s.pOn)   pOn={...s.pOn};
+    if(s.diary) diary={...s.diary};
+    if(s.sortCol) sortCol=s.sortCol;
+    if(s.sortDir) sortDir=s.sortDir;
+  }catch(e){}
+}
+
+// ── Patch UI ─────────────────────────────────────────────────────────────────
+function buildPatches(){
+  const grid=g('patch-grid');
+  grid.innerHTML='';
+  PATCHES.forEach(p=>{
+    if(pOn[p.id]===undefined) pOn[p.id]=true;
+    const card=document.createElement('div');
+    card.className='pcard'+(pOn[p.id]?' on':'');
+    card.id='pc-'+p.id;
+    let diary_html='';
+    if(p.diary){
+      diary_html=`<div class="pdiary"><label class="cb-row" onclick="event.stopPropagation()">
+        <input type="checkbox" ${diary[p.diary]?'checked':''}
+          onchange="diary['${p.diary}']=this.checked;syncDiary('${p.diary}');save();calc()"/>
+        <span>${p.dlabel}</span>
+      </label></div>`;
+    }
+    card.innerHTML=`<div class="ptop">
+      <input type="checkbox" ${pOn[p.id]?'checked':''} onclick="event.stopPropagation()"
+        onchange="pOn['${p.id}']=this.checked;refreshCard('${p.id}');save();calc()"/>
+      <div><div class="pname">${p.name}</div>
+      <div class="ptag">${p.prot?'🛡 Disease-free':'🌱 Standard'}</div></div>
+    </div>${diary_html}`;
+    card.addEventListener('click',e=>{
+      if(e.target.tagName==='INPUT')return;
+      pOn[p.id]=!pOn[p.id];
+      card.querySelector('.ptop input').checked=pOn[p.id];
+      refreshCard(p.id);save();calc();
+    });
+    grid.appendChild(card);
+  });
+}
+function syncDiary(key){
+  PATCHES.forEach(p=>{
+    if(p.diary!==key)return;
+    const c=document.getElementById('pc-'+p.id);
+    if(c){const cb=c.querySelector('.pdiary input');if(cb)cb.checked=diary[key];}
+  });
+}
+function refreshCard(id){
+  const c=document.getElementById('pc-'+id);
+  if(c)c.className='pcard'+(pOn[id]?' on':'');
+}
+
+// ── Settings toggle ───────────────────────────────────────────────────────────
+let settingsOpen=false;
+function toggleSettings(){
+  settingsOpen=!settingsOpen;
+  const panel=g('settings-panel');
+  panel.classList.toggle('open',settingsOpen);
+  g('settings-btn').textContent=settingsOpen?'✕ Close':'⚙ Settings';
+}
+
+// ── Math ─────────────────────────────────────────────────────────────────────
+function interp(lo,hi,lvl){
+  return Math.min(Math.max((Math.floor(lo*(99-lvl)/98)+Math.floor(hi*(lvl-1)/98)+1)/256,0),1);
+}
+function estYield(flvl,lo,hi,lives,itemB,ctsB,attasB){
+  let l=Math.floor(Math.floor(lo*(1+itemB))+ctsB);
+  let h=Math.floor(Math.floor(hi*(1+itemB))+ctsB);
+  l=Math.floor(l*(1+attasB)); h=Math.floor(h*(1+attasB));
+  return lives/(1-interp(l,h,flvl));
+}
+
+// ── Format ───────────────────────────────────────────────────────────────────
+function fmt(n){
+  if(n===null||isNaN(n))return'—';
+  const a=Math.abs(n);
+  if(a>=1e6)return(n/1e6).toFixed(2)+'M';
+  if(a>=1e3)return(n/1e3).toFixed(1)+'k';
+  return Math.round(n).toLocaleString();
+}
+
+// ── Calc ─────────────────────────────────────────────────────────────────────
+function calc(){
+  if(!Object.keys(prices).length)return;
+  const flvl=+g('flvl').value||99, mlvl=+g('mlvl').value||99;
+  const compost=g('compost').value, sell=g('sell').value, anima=g('anima').value;
+  const useSec=g('sec').checked, useCape=g('fcape').checked;
+  const useBot=g('bottomless').checked, useRes=g('resurrect').checked;
+
+  const cc=compost!=='None'?(prices[compost]||0)*(useBot?.5:1):0;
+  const rCost=(prices['Soul rune']||0)*8+(prices['Nature rune']||0)*12+(prices['Blood rune']||0)*8+(prices['Earth rune']||0)*25;
+  const chR=interp(-111,191,mlvl);
+  let itemB=0; if(useSec)itemB+=.1; if(useCape)itemB+=.05;
+  const attasB=anima==='Attas'?.05:0, dmod=anima==='Iasor'?.2:1;
+  const drS=(Math.floor(Math.floor(27/CDEATH[compost])*dmod)+1)/128;
+  let bSurv=(1-drS)**3, bDeath=1-bSurv;
+  if(useRes){const d=drS,s=1-d;bDeath=((1-(1-d)**4)*(1-chR))+6*d*d*s*s+4*d*d*d*s+d**4;bSurv=1-bDeath;}
+  const lives=3+CLIVES[compost];
+  const active=PATCHES.filter(p=>pOn[p.id]);
+  g('m-count').textContent=active.length;
+
+  const rows=HERBS.map(h=>{
+    const sp=prices[h.seed]||0;
+    const hp=sell==='Clean'?(prices[h.clean]||0):(prices[h.grimy]||0);
+    const rv=useRes&&sp>0?(sp*chR>rCost):null;
+    let tY=0,tP=0,tX=0,tDR=0;
+    active.forEach(pd=>{
+      const dr=pd.prot?0:bDeath, surv=1-dr;
+      const ctsB=(pd.diary&&diary[pd.diary])?(CTS[String(pd.dbonus)]||0):0;
+      const rawY=estYield(flvl,h.lo,h.hi,lives,itemB,ctsB,attasB);
+      const tY2=pd.prot?rawY:rawY*bSurv;
+      tY+=tY2; tP+=hp*tY2-(cc+sp+(!pd.prot&&useRes?rCost*dr:0));
+      tX+=tY2*h.xp+h.pxp*surv; tDR+=dr;
+    });
+    return{name:h.name,lvl:h.lvl,seed:sp,hprice:hp,
+      death:active.length?tDR/active.length:0,
+      yield:tY,res:rv,profit:tP,xp:tX,gpxp:tP/tX};
+  });
+
+  rows.sort((a,b)=>sortDir*(a[sortCol]>b[sortCol]?1:a[sortCol]<b[sortCol]?-1:0));
+  const best=[...rows].sort((a,b)=>b.profit-a.profit)[0];
+
+  g('m-best').textContent=best?best.name:'—';
+  const mp=g('m-profit');
+  mp.textContent=best?fmt(best.profit):'—';
+  mp.className='mval '+(!best||best.profit>=0?'pos':'neg');
+  g('m-xp').textContent=best?Math.round(best.xp).toLocaleString():'—';
+
+  document.querySelectorAll('th[id^="th-"]').forEach(t=>t.classList.remove('sort-on'));
+  const st=document.getElementById('th-'+sortCol);
+  if(st)st.classList.add('sort-on');
+
+  g('tbody').innerHTML=rows.map(r=>{
+    const pc=r.profit>=0?'pos-t':'neg-t';
+    const rb=r.res===true?'<span class="badge b-yes">Worth it</span>':r.res===false?'<span class="badge b-no">Skip</span>':'<span class="na">n/a</span>';
+    return`<tr><td>${r.name}</td><td class="r" style="color:var(--text3)">${r.lvl}</td><td class="r">${fmt(r.seed)}</td><td class="r">${fmt(r.hprice)}</td><td class="r">${(r.death*100).toFixed(1)}%</td><td class="r">${r.yield.toFixed(2)}</td><td>${rb}</td><td class="r ${pc}">${fmt(r.profit)}</td><td class="r">${Math.round(r.xp).toLocaleString()}</td><td class="r">${isFinite(r.gpxp)?r.gpxp.toFixed(1):'—'}</td></tr>`;
+  }).join('');
+}
+function srt(col){if(sortCol===col)sortDir*=-1;else{sortCol=col;sortDir=-1;}save();calc();}
+
+// ── Auto-refresh countdown ────────────────────────────────────────────────────
+function startCountdown(){
+  clearInterval(countdownTimer);
+  nextRefreshAt=Date.now()+5*60*1000;
+  const el=g('next-ref');
+  el.style.display='inline';
+  countdownTimer=setInterval(()=>{
+    const s=Math.max(0,Math.round((nextRefreshAt-Date.now())/1000));
+    el.textContent=`${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;
+    if(s===0)clearInterval(countdownTimer);
+  },1000);
+}
+
+// ── Price fetch ───────────────────────────────────────────────────────────────
+async function fetchPrices(manual=false){
+  const dot=g('dot'), stxt=g('status-text');
+  dot.className='dot load'; stxt.textContent='Fetching…';
+  try{
+    if(!Object.keys(nameToId).length){
+      const r=await fetch('https://prices.runescape.wiki/api/v1/osrs/mapping',
+        {headers:{'User-Agent':'OSRS-Herb-Run-Calc - clan tool'}});
+      if(!r.ok)throw new Error('Mapping HTTP '+r.status);
+      const needed=new Set(NEEDED);
+      for(const item of await r.json())if(needed.has(item.name))nameToId[item.name]=String(item.id);
+    }
+
+    const r5=await fetch('https://prices.runescape.wiki/api/v1/osrs/5m',
+      {headers:{'User-Agent':'OSRS-Herb-Run-Calc - clan tool'}});
+    if(!r5.ok)throw new Error('Prices HTTP '+r5.status);
+    const d5=await r5.json();
+
+    prices={};
+    for(const[name,id]of Object.entries(nameToId)){
+      const e=d5.data[id]; if(!e)continue;
+      prices[name]=(e.avgHighPrice&&e.avgLowPrice)?Math.round((e.avgHighPrice+e.avgLowPrice)/2):(e.avgHighPrice||e.avgLowPrice||0);
+    }
+
+    // Fallback to /latest for anything missing from 5m
+    const missing=NEEDED.filter(n=>!prices[n]&&nameToId[n]);
+    if(missing.length){
+      const rl=await fetch('https://prices.runescape.wiki/api/v1/osrs/latest',
+        {headers:{'User-Agent':'OSRS-Herb-Run-Calc - clan tool'}});
+      if(rl.ok){
+        const dl=await rl.json();
+        for(const name of missing){
+          const e=dl.data[nameToId[name]]; if(!e)continue;
+          prices[name]=(e.high&&e.low)?Math.round((e.high+e.low)/2):(e.high||e.low||0);
+        }
+      }
+    }
+
+    const ts=d5.timestamp?new Date(d5.timestamp*1000).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+    g('ts').textContent='Prices: '+ts+' (5-min avg)';
+    dot.className='dot ok'; stxt.textContent='Live ✓';
+    clearTimeout(refreshTimer);
+    refreshTimer=setTimeout(()=>fetchPrices(false),5*60*1000);
+    startCountdown();
+    calc();
+  }catch(err){
+    dot.className='dot err'; stxt.textContent='Error: '+err.message;
+    g('tbody').innerHTML=`<tr><td colspan="10" style="text-align:center;padding:36px;color:var(--red)">⚠ ${err.message}<br><span style="font-size:12px;color:var(--text3)">Check connection and tap Refresh.</span></td></tr>`;
+  }
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function g(id){return document.getElementById(id)}
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+loadSaved();
+buildPatches();
+document.querySelectorAll('select,input[type=number],input[type=checkbox]').forEach(el=>{
+  el.addEventListener('change',()=>{save();calc();});
+});
+fetchPrices();
+</script>
+</body>
+</html>
