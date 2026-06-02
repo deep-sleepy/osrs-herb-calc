@@ -229,6 +229,11 @@ tr:last-child td{border-bottom:none}
     <label class="cb-row"><input type="checkbox" id="bottomless" checked/> Bottomless bucket</label>
     <label class="cb-row"><input type="checkbox" id="resurrect"/> Resurrect Crops</label>
     <label class="cb-row"><input type="checkbox" id="kourend"/> Hard Kourend diary (+5% yield at Guild)</label>
+    <label class="cb-row"><input type="checkbox" id="prot-hosidius" onchange="buildPatches();save();calc()"/> Hosidius disease-free patch</label>
+    <label class="cb-row"><input type="checkbox" id="prot-weiss" onchange="buildPatches();save();calc()"/> Weiss disease-free patch</label>
+    <label class="cb-row"><input type="checkbox" id="prot-trollheim" onchange="buildPatches();save();calc()"/> Trollheim disease-free patch</label>
+    <label class="cb-row"><input type="checkbox" id="prot-harmony" onchange="buildPatches();save();calc()"/> Harmony Island disease-free patch</label>
+    <label class="cb-row"><input type="checkbox" id="prot-civitas" onchange="buildPatches();save();calc()"/> Civitas illa Fortis disease-free patch (16k glory)</label>
 
     <div class="patch-section">
       <div class="slabel" style="margin-bottom:6px">Herb Patches</div>
@@ -303,19 +308,35 @@ const HERBS=[
   {name:'Torstol',     seed:'Torstol seed',     grimy:'Grimy torstol',     clean:'Torstol',     lo:71,hi:80,lvl:85,xp:224.5,pxp:199.5,unf:'Torstol potion (unf)'},
 ];
 const PATCHES=[
-  // prot=disease free, kandarinBonus applied globally via dropdown, kourend via checkbox
-  // Notes: Hosidius=Easy Kourend diary, Harmony=Elite Morytania diary, Civitas=Fortis Colosseum Champion
-  {id:'ardougne',  name:'Ardougne',           prot:false,kourend:false},
-  {id:'catherby',  name:'Catherby',            prot:false,kandarin:true},  // gets global kandarin bonus
-  {id:'falador',   name:'Falador',             prot:false,kourend:false},
-  {id:'morytania', name:'Morytania',           prot:false,kourend:false},
-  {id:'hosidius',  name:'Hosidius',            prot:true, kourend:true, dlabel:'Req: Easy Kourend diary'},
-  {id:'weiss',     name:'Weiss',               prot:true, kourend:false},
-  {id:'trollheim', name:'Trollheim',           prot:true, kourend:false},
-  {id:'harmony',   name:'Harmony Island',      prot:true, kourend:false, dlabel:'Req: Elite Morytania diary'},
-  {id:'civitas',   name:'Civitas illa Fortis', prot:true, kourend:false, dlabel:'Req: Fortis Colosseum Champion'},
-  {id:'guild',     name:'Farming Guild',       prot:false,kourend:true,  dlabel:'Req: Hard Kourend diary (+5% yield)'},
+  // prot is always false here — disease-free status is controlled by individual checkboxes at runtime
+  {id:'ardougne',  name:'Ardougne',           prot:false, kandarin:false, kourend:false},
+  {id:'catherby',  name:'Catherby',           prot:false, kandarin:true,  kourend:false},
+  {id:'falador',   name:'Falador',            prot:false, kandarin:false, kourend:false},
+  {id:'morytania', name:'Morytania',          prot:false, kandarin:false, kourend:false},
+  {id:'hosidius',  name:'Hosidius',           prot:false, kandarin:false, kourend:true},
+  {id:'weiss',     name:'Weiss',              prot:false, kandarin:false, kourend:false},
+  {id:'trollheim', name:'Trollheim',          prot:false, kandarin:false, kourend:false},
+  {id:'harmony',   name:'Harmony Island',     prot:false, kandarin:false, kourend:false},
+  {id:'civitas',   name:'Civitas illa Fortis',prot:false, kandarin:false, kourend:false},
+  {id:'guild',     name:'Farming Guild',      prot:false, kandarin:false, kourend:true},
 ];
+
+// Maps patch id -> checkbox id for disease-free toggles
+const PROT_CHECKBOX={
+  hosidius:'prot-hosidius',
+  weiss:'prot-weiss',
+  trollheim:'prot-trollheim',
+  harmony:'prot-harmony',
+  civitas:'prot-civitas',
+};
+
+// Returns true if this patch is currently disease-free
+function isProt(patchId){
+  const cbId=PROT_CHECKBOX[patchId];
+  if(!cbId) return false;
+  const el=document.getElementById(cbId);
+  return el?el.checked:false;
+}
 const CTS   ={'0':0,'0.05':10,'0.1':17,'0.15':25};
 const CDEATH={None:1,Compost:2,Supercompost:5,Ultracompost:10};
 const CLIVES={None:0,Compost:1,Supercompost:2,Ultracompost:3};
@@ -335,6 +356,12 @@ function save(){
     kandarin:g('kandarin').value, kourend:g('kourend').checked,
     sec:g('sec').checked, fcape:g('fcape').checked,
     bottomless:g('bottomless').checked, resurrect:g('resurrect').checked,
+    kourend:g('kourend').checked,
+    'prot-hosidius':g('prot-hosidius').checked,
+    'prot-weiss':g('prot-weiss').checked,
+    'prot-trollheim':g('prot-trollheim').checked,
+    'prot-harmony':g('prot-harmony').checked,
+    'prot-civitas':g('prot-civitas').checked,
     pOn:{...pOn}, sortCol, sortDir
   }));}catch(e){}
 }
@@ -347,7 +374,7 @@ function loadSaved(){
     if(s.compost) g('compost').value=s.compost;
     if(s.sell)    g('sell').value=s.sell;
     if(s.anima)   g('anima').value=s.anima;
-    ['sec','fcape','bottomless','resurrect','kourend'].forEach(id=>{if(s[id]!==undefined)g(id).checked=s[id];});
+    ['sec','fcape','bottomless','resurrect','kourend','prot-hosidius','prot-weiss','prot-trollheim','prot-harmony','prot-civitas'].forEach(id=>{if(s[id]!==undefined)g(id).checked=s[id];});
     if(s.kandarin) g('kandarin').value=s.kandarin;
     if(s.pOn)   pOn={...s.pOn};
     if(s.sortCol) sortCol=s.sortCol;
@@ -366,12 +393,13 @@ function buildPatches(){
     card.id='pc-'+p.id;
     // Show requirement note if patch has one
     const noteHtml=p.dlabel?`<div class="ptag" style="color:var(--text3);margin-top:2px;font-size:10px">${p.dlabel}</div>`:'';
+    const isThisProt=isProt(p.id);
     card.innerHTML=`<div class="ptop">
       <input type="checkbox" ${pOn[p.id]?'checked':''} onclick="event.stopPropagation()"
         onchange="pOn['${p.id}']=this.checked;refreshCard('${p.id}');save();calc()"/>
       <div>
         <div class="pname">${p.name}</div>
-        <div class="ptag">${p.prot?'🛡 Disease-free':'🌱 Standard'}</div>
+        <div class="ptag">${isThisProt?'🛡 Disease-free':'🌱 Standard'}</div>
         ${noteHtml}
       </div>
     </div>`;
@@ -455,18 +483,19 @@ function calc(){
     const rv=useRes&&sp>0?(sp*chR>rCost):null;
     let tY=0,tP=0,tX=0,tDR=0;
     active.forEach(pd=>{
-      const dr=pd.prot?0:bDeath, surv=1-dr;
+      const isProtected=isProt(pd.id);
+      const dr=isProtected?0:bDeath, surv=1-dr;
       // Apply correct CTS bonus per patch type
       // Catherby gets the Kandarin diary bonus (global dropdown)
       // Hosidius and Guild get Kourend diary bonus (+10 CTS if Hard Kourend diary)
       const ctsB=pd.kandarin?kandarinCTS:(pd.kourend?kourendCTS:0);
       const rawY=estYield(flvl,h.lo,h.hi,lives,itemB,ctsB,attasB);
-      const tY2=pd.prot?rawY:rawY*bSurv;
+      const tY2=isProtected?rawY:rawY*bSurv;
       // XP: harvest XP * expected yield + plant XP * survival rate (plant XP only earned if patch survives)
       // plantXp always uses global patchSurvivalRate (bSurv) per Lua source
       const patchXp=tY2*h.xp+h.pxp*bSurv;
       const vialCost=sell==='Unf'?(prices['Vial of water']||0):0;
-      tY+=tY2; tP+=hp*tY2-(cc+sp+(!pd.prot&&useRes?rCost*dr:0))-(tY2*vialCost);
+      tY+=tY2; tP+=hp*tY2-(cc+sp+(!isProtected&&useRes?rCost*dr:0))-(tY2*vialCost);
       tX+=patchXp; tDR+=dr;
     });
     return{name:h.name,lvl:h.lvl,seed:sp,hprice:hp,
@@ -566,13 +595,14 @@ function calcPatchRows(pd, flvl, mlvl, compost, sell, anima, useSec, useCape, us
     const sp=prices[h.seed]||0;
     const hp=sell==='Clean'?(prices[h.clean]||0):sell==='Unf'?(prices[h.unf]||0):(prices[h.grimy]||0);
     const rv=useRes&&sp>0?(sp*chR>rCost):null;
-    const dr=pd.prot?0:bDeath;
+    const isProtected=isProt(pd.id);
+    const dr=isProtected?0:bDeath;
     const ctsB=pd.kandarin?kandarinCTS:(pd.kourend?kourendCTS:0);
     const rawY=estYield(flvl,h.lo,h.hi,lives,itemB,ctsB,attasB);
-    const tY2=pd.prot?rawY:rawY*bSurv;
+    const tY2=isProtected?rawY:rawY*bSurv;
     const patchXp=tY2*h.xp+h.pxp*bSurv;
     const vialCost=sell==='Unf'?(prices['Vial of water']||0):0;
-    const profit=hp*tY2-(cc+sp+(!pd.prot&&useRes?rCost*dr:0))-(tY2*vialCost);
+    const profit=hp*tY2-(cc+sp+(!isProtected&&useRes?rCost*dr:0))-(tY2*vialCost);
     return{name:h.name,lvl:h.lvl,seed:sp,hprice:hp,
            death:dr,yield:tY2,res:rv,profit,xp:patchXp,gpxp:profit/patchXp};
   });
@@ -663,48 +693,54 @@ function buildBreakdowns(){
 
   const active=PATCHES.filter(p=>pOn[p.id]);
 
-  // Separate into logical groups
+  // Groups match wiki layout — one table per patch type regardless of diary state
   const groups=[];
 
-  // Hosidius
+  // Hosidius — always its own table, label reflects actual protection + diary state
   const hosidius=active.find(p=>p.id==='hosidius');
   if(hosidius){
-    const bonus=useKourend?'+5% Kourend diary bonus':'';
-    const label=bonus
-      ?`Hosidius (Protected${bonus?', '+bonus:''})`
-      :'Hosidius (Protected)';
+    const hProt=isProt('hosidius');
+    const label=hProt
+      ?(useKourend?'Hosidius (Protected, +5% Kourend diary)':'Hosidius (Protected)')
+      :(useKourend?'Hosidius (Standard, +5% Kourend diary)':'Hosidius (Standard)');
     groups.push({label, patches:[hosidius]});
   }
 
-  // Other protected patches grouped
-  const otherProt=active.filter(p=>p.prot&&p.id!=='hosidius');
+  // Other protected patches (Weiss, Trollheim, Harmony, Civitas) grouped together
+  const otherProt=active.filter(p=>isProt(p.id)&&p.id!=='hosidius');
   if(otherProt.length>0){
     const names=otherProt.map(p=>p.name).join(', ');
     groups.push({label:`${names} (Protected)`, patches:otherProt});
   }
 
-  // Catherby
+  // Catherby (always its own table — may have kandarin bonus)
   const catherby=active.find(p=>p.id==='catherby');
   if(catherby){
-    const tier=['None','Medium (+5%)','Hard (+10%)','Elite (+15%)'][[0,10,17,25].indexOf(kandarinCTS)];
+    const tier={10:'Medium (+5%)',17:'Hard (+10%)',25:'Elite (+15%)'};
     const label=kandarinCTS>0
-      ?`Catherby (Kandarin diary ${tier||'+'+kandarinCTS+' CTS'})`
-      :'Catherby (Standard)';
+      ?`Catherby (Kandarin diary ${tier[kandarinCTS]||'bonus'})`
+      :'Catherby';
     groups.push({label, patches:[catherby]});
   }
 
-  // Farming Guild
+  // Farming Guild (always its own table — may have kourend bonus)
   const guild=active.find(p=>p.id==='guild');
   if(guild){
-    const label=useKourend?'Farming Guild (+5% Kourend diary bonus)':'Farming Guild (Standard)';
+    const label=useKourend
+      ?'Farming Guild (+5% Kourend diary)'
+      :'Farming Guild';
     groups.push({label, patches:[guild]});
   }
 
-  // Remaining standard patches (excluding catherby and guild which are already handled)
-  const stdRest=active.filter(p=>!p.prot&&p.id!=='catherby'&&p.id!=='guild');
+  // Remaining standard patches (Ardougne, Falador, Morytania)
+  const stdRest=active.filter(p=>{
+    if(isProt(p.id)) return false;       // in a protected group
+    if(p.id==='catherby'||p.id==='guild') return false;
+    return true;
+  });
   if(stdRest.length>0){
     const names=stdRest.length===1?stdRest[0].name:`${stdRest.length} standard patches`;
-    groups.push({label:`${names}`, patches:stdRest});
+    groups.push({label:names, patches:stdRest});
   }
 
   const section=g('breakdown-section');
@@ -716,7 +752,12 @@ function buildBreakdowns(){
     openState[el.id]=el.classList.contains('open');
   });
 
-  let html='<div style="font-size:13px;font-weight:500;color:var(--gold);margin-bottom:10px">Per-patch breakdown — click to expand</div>';
+  const bdTs=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  console.log('[Breakdowns] rebuilding at '+bdTs+' kandarinCTS='+kandarinCTS+' useKourend='+useKourend+' groups will be built for '+active.length+' patches');
+  let html='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">'+
+    '<div style="font-size:13px;font-weight:500;color:var(--gold)">Per-patch breakdown — click to expand</div>'+
+    '<div style="font-size:11px;color:var(--text3)">Updated '+bdTs+'</div>'+
+    '</div>';
 
   groups.forEach((grp,i)=>{
     const id='grp'+i;
